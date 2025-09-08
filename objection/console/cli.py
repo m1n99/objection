@@ -26,13 +26,19 @@ from ..utils.helpers import normalize_gadget_name, print_frida_connection_help, 
 @click.option('--port', '-p', required=False, default=27042, show_default=True)
 @click.option('--api-host', '-ah', default='127.0.0.1', show_default=True)
 @click.option('--api-port', '-ap', required=False, default=8888, show_default=True)
-@click.option('--gadget', '-g', required=False, default='Gadget',
+@click.option('--gadget', '-g', required=True, default='Gadget',
               help='Name of the Frida Gadget/Process to connect to.', show_default=True)
 @click.option('--serial', '-S', required=False, default=None, help='A device serial to connect to.')
 @click.option('--debug', '-d', required=False, default=False, is_flag=True,
               help='Enable debug mode with verbose output. (Includes agent source map in stack traces)')
+@click.option('--spawn', '-s', required=False, default=False, is_flag=True, 
+              help='Use spawn mode, True: gadget is package name, False: gadget is Process name.')
+@click.option('--init-script', '-is', required=False, type=click.File("r"), 
+              help='A script to do some initialize operations on startup.')
+@click.option('--init-time', '-it', required=False, default=1, type=int, 
+              help='Execute init script need some time (seconds).')
 def cli(network: bool, host: str, port: int, api_host: str, api_port: int,
-        gadget: str, serial: str, debug: bool) -> None:
+        gadget: str, serial: str, debug: bool, spawn: bool, init_script: click.File, init_time: int) -> None:
     """
         \b
              _   _         _   _
@@ -65,6 +71,10 @@ def cli(network: bool, host: str, port: int, api_host: str, api_port: int,
     app_state.api_port = api_port
 
     state_connection.gadget_name = normalize_gadget_name(gadget_name=gadget)
+
+    state_connection.spawn = spawn
+    state_connection.init_script = init_script
+    state_connection.init_time = init_time
 
 
 @cli.command()

@@ -21,6 +21,11 @@ class StateConnection(object):
         self.agent = None
         self.api = None
 
+        self.spawn = False
+
+        self.init_script = None
+        self.init_time = 1
+
     def use_usb(self) -> None:
         """
             Sets the values required to have a USB connection.

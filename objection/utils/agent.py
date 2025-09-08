@@ -12,6 +12,8 @@ from ..state.app import app_state
 from ..state.connection import state_connection
 from ..utils.helpers import debug_print
 
+import time
+
 
 class Agent(object):
     """ Class to manage the lifecycle of the Frida agent. """
@@ -144,9 +146,21 @@ class Agent(object):
 
         self.device = self._get_device()
 
-        # try and get the target process.
-        try:
+        if state_connection.spawn:
+            self.spawned_pid = self.device.spawn(state_connection.gadget_name)
+            debug_print('PID `{pid}` spawned, attaching...'.format(pid=self.spawned_pid))
+            self.session = self.device.attach(self.spawned_pid)
 
+            if state_connection.init_script:
+                init_script = self.session.create_script(state_connection.init_script.read())
+                init_script.on("message", lambda message, data: print(message, data))
+                init_script.load()
+                self.device.resume(self.spawned_pid)
+                self.resumed = True
+
+                time.sleep(state_connection.init_time)
+                # debug_print("init_script finished.")
+        else:
             debug_print('Attempting to attach to process: `{process}`'.format(
                 process=state_connection.gadget_name))
             self.session = self.device.attach(state_connection.gadget_name)
@@ -155,18 +169,29 @@ class Agent(object):
 
             self.session.on('detached', self.on_detach)
 
-            return self.session
+        # # try and get the target process.
+        # try:
 
-        except frida.ProcessNotFoundError:
-            debug_print('Unable to find process: `{process}`, attempting spawn'.format(
-                process=state_connection.gadget_name))
+        #     debug_print('Attempting to attach to process: `{process}`'.format(
+        #         process=state_connection.gadget_name))
+        #     self.session = self.device.attach(state_connection.gadget_name)
+        #     debug_print('Process attached!')
+        #     self.resumed = True
 
-        # TODO: Handle the fact that gadget mode can't spawn
+        #     self.session.on('detached', self.on_detach)
 
-        self.spawned_pid = self.device.spawn(state_connection.gadget_name)
-        debug_print('PID `{pid}` spawned, attaching...'.format(pid=self.spawned_pid))
+        #     return self.session
 
-        self.session = self.device.attach(self.spawned_pid)
+        # except frida.ProcessNotFoundError:
+        #     debug_print('Unable to find process: `{process}`, attempting spawn'.format(
+        #         process=state_connection.gadget_name))
+
+        # # TODO: Handle the fact that gadget mode can't spawn
+
+        # self.spawned_pid = self.device.spawn(state_connection.gadget_name)
+        # debug_print('PID `{pid}` spawned, attaching...'.format(pid=self.spawned_pid))
+        # self.session = self.device.attach(self.spawned_pid)
+        
         return self.session
 
     def _get_agent_source(self) -> str:
